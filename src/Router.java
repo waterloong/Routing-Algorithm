@@ -1,4 +1,4 @@
-import java.io.*;
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -27,6 +27,9 @@ public class Router {
         packetInit.routerId = id;
         byte[] data = packetInit.toBytes();
         DatagramPacket datagramPacket = new DatagramPacket(data, data.length, nseHost, nsePort);
+        for (byte b : datagramPacket.getData()) {
+            System.out.println(b);
+        }
         nseSocket.send(datagramPacket);
     }
 
