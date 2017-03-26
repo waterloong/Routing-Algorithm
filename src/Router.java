@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
 
 public class Router {
 
@@ -24,7 +25,7 @@ public class Router {
     private void sendInit() throws IOException {
         PacketInit packetInit = new PacketInit();
         packetInit.routerId = id;
-        byte[] data = serialize(packetInit);
+        byte[] data = packetInit.toBytes();
         DatagramPacket datagramPacket = new DatagramPacket(data, data.length, nseHost, nsePort);
         nseSocket.send(datagramPacket);
     }
@@ -57,27 +58,15 @@ public class Router {
             System.exit(1);
         }
     }
-
-    private static byte[] serialize(Serializable serializable) throws IOException {
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
-        objectOutputStream.writeObject(serializable);
-        objectOutputStream.flush();
-        objectOutputStream.close();
-        return byteArrayOutputStream.toByteArray();
-    }
-
-    private static class PacketInit implements Externalizable {
+    private static class PacketInit {
 
         int routerId;
 
-        @Override
-        public void writeExternal(ObjectOutput out) throws IOException {
-            out.write(routerId);
+        private byte[] toBytes() {
+            ByteBuffer byteBuffer = ByteBuffer.allocate(4);
+            byteBuffer.putInt(routerId);
+            return byteBuffer.array();
         }
-
-        @Override
-        public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {}
     }
 }
 
