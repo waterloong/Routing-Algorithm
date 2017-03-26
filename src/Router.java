@@ -67,7 +67,7 @@ public class Router {
 
         private byte[] toBytes() {
             ByteBuffer byteBuffer = ByteBuffer.allocate(4);
-            byteBuffer.putInt(routerId);
+            byteBuffer.putInt(Integer.reverseBytes(routerId));
             return byteBuffer.array();
         }
     }
