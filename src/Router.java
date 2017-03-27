@@ -184,7 +184,7 @@ public class Router {
 
     private static class CircuitDb {
         private int nLinks;
-        private SortedSet<LinkCost> linkCosts = new TreeSet<>();
+        private Set<LinkCost> linkCosts = new LinkedHashSet<>();
     }
 
     private static class PacketHello {
