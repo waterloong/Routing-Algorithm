@@ -39,6 +39,7 @@ public class Router {
         this.nsePort = nsePort;
         for (int i = 0; i < NUMBER_OF_ROUTERS; i ++) {
             Arrays.fill(dag[i], Integer.MAX_VALUE);
+            circuitDbs[i] = new CircuitDb();
         }
         sendInit();
         receiveCircuitDb();
@@ -65,7 +66,7 @@ public class Router {
     private void receiveCircuitDb() throws IOException {
         byte[] data = this.receivePacket();
         ByteBuffer byteBuffer = ByteBuffer.wrap(data);
-        this.circuitDbs[id - 1] = new CircuitDb();
+
         circuitDbs[id - 1].nLinks = Integer.reverseBytes(byteBuffer.getInt());
         System.out.println("R" + circuitDbs[id - 1].nLinks + " receives a CIRCUIT_DB: nLinks " + circuitDbs[id - 1].nLinks);
         for (int i = 0; i < circuitDbs[id - 1].nLinks; i ++) {
