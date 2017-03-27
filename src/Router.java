@@ -109,11 +109,11 @@ public class Router {
                     routerId ++;
                 }
             } else {
-                int sender = byteBuffer.getInt();
-                int routerId = byteBuffer.getInt();
-                int linkId = byteBuffer.getInt();
-                int cost = byteBuffer.getInt();
-                int via = byteBuffer.getInt();
+                int sender = Integer.reverseBytes(byteBuffer.getInt());
+                int routerId = Integer.reverseBytes(byteBuffer.getInt());
+                int linkId = Integer.reverseBytes(byteBuffer.getInt());
+                int cost = Integer.reverseBytes(byteBuffer.getInt());
+                int via = Integer.reverseBytes(byteBuffer.getInt());
                 System.out.printf("R%d receives an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
                         id, sender, routerId, linkId, cost, via);
 
