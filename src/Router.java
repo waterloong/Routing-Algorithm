@@ -64,16 +64,13 @@ public class Router {
 
     private void receiveCircuitDb() throws IOException {
         byte[] data = this.receivePacket();
-        for (byte b: data) {
-            System.out.println(b);
-        }
         ByteBuffer byteBuffer = ByteBuffer.wrap(data);
         this.circuitDbs[id - 1] = new CircuitDb();
         circuitDbs[id - 1].nLinks = Integer.reverseBytes(byteBuffer.getInt());
         System.out.println("R" + circuitDbs[id - 1].nLinks + " receives a CIRCUIT_DB: nLinks " + circuitDbs[id - 1].nLinks);
-        for (LinkCost linkCost: circuitDbs[id - 1].linkCosts) {
-            linkCost.link = Integer.reverseBytes(byteBuffer.getInt());
-            linkCost.cost = Integer.reverseBytes(byteBuffer.getInt());
+        for (int i = 0; i < circuitDbs[id - 1].nLinks; i ++) {
+            LinkCost linkCost = new LinkCost(Integer.reverseBytes(byteBuffer.getInt()), Integer.reverseBytes(byteBuffer.getInt()));
+            circuitDbs[id - 1].linkCosts.add(linkCost);
             System.out.printf("R%d -> R%d link %d cost %d\n", id, id, linkCost.link, linkCost.cost);
         }
     }
@@ -119,7 +116,7 @@ public class Router {
                 int via = byteBuffer.getInt();
                 System.out.printf("R%d receives an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
                         id, sender, routerId, linkId, cost, via);
-                
+
                 this.circuitDbs[routerId - 1].nLinks ++;
                 LinkCost linkCost = new LinkCost(linkId, cost);
                 this.circuitDbs[routerId - 1].linkCosts.add(linkCost);
