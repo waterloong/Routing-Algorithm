@@ -31,6 +31,7 @@ public class Router {
                 logWriter.printf("R%d -> R%d link %d cost %d\n", id, linkCost.link, linkCost.cost);
             }
         }
+        dijkstra();
     }
 
     private void dijkstra() {
@@ -93,8 +94,7 @@ public class Router {
                     });
         }
 
-        // print RIB if changed
-        if (Arrays.equals(rib, newRib)) return;
+        // print RIB
         logWriter.println("# RIB");
         for (int i = 0; i < NUMBER_OF_ROUTERS; i++) {
             logWriter.printf("R%d -> R%d -> ", id, i + 1);
@@ -176,14 +176,14 @@ public class Router {
             logWriter.println("R" + id + " receives a HELLO: routerId " + packetHello.routerId + " linkId " + packetHello.link);
             int routerId = 1;
             while (routerId <= NUMBER_OF_ROUTERS) {
-                if (circuitDbs[routerId - 1] != null) {
-                    for (LinkCost linkCost : circuitDbs[routerId - 1].linkCosts) {
-                        byte[] bufferedLspdu = new PacketLSPDU(id, routerId, linkCost.link, linkCost.cost, packetHello.link).toBytes();
-                        DatagramPacket datagramPacket = new DatagramPacket(bufferedLspdu, bufferedLspdu.length, nseHost, nsePort);
-                        this.nseSocket.send(datagramPacket);
-                    }
+                for (LinkCost linkCost : circuitDbs[routerId - 1].linkCosts) {
+                    byte[] bufferedLspdu = new PacketLSPDU(id, routerId, linkCost.link, linkCost.cost, packetHello.link).toBytes();
+                    DatagramPacket datagramPacket = new DatagramPacket(bufferedLspdu, bufferedLspdu.length, nseHost, nsePort);
+                    this.nseSocket.send(datagramPacket);
+                    logWriter.printf("R%d sends an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
+                            id, id, routerId, linkCost.link, linkCost.cost, packetHello.link);
                 }
-                routerId++;
+                routerId ++;
             }
         }
         // exit after 1 min
@@ -205,9 +205,11 @@ public class Router {
             logWriter.printf("R%d receives an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
                     id, sender, routerId, linkId, cost, via);
 
-            this.circuitDbs[routerId - 1].nLinks++;
             LinkCost linkCost = new LinkCost(linkId, cost);
-            this.circuitDbs[routerId - 1].linkCosts.add(linkCost);
+            if (this.circuitDbs[routerId - 1].linkCosts.add(linkCost)) {
+                this.circuitDbs[routerId - 1].nLinks++;
+                printTopologyDatabase();
+            }
             this.duplicateTracker.put(linkId, linkCost);
             for (LinkCost lc : circuitDbs[id - 1].linkCosts) {
                 PacketLSPDU packetLSPDU = new PacketLSPDU(id, routerId, linkId, cost, lc.link);
@@ -215,11 +217,10 @@ public class Router {
                     byte[] bufferedLspdu = packetLSPDU.toBytes();
                     DatagramPacket datagramPacket = new DatagramPacket(bufferedLspdu, bufferedLspdu.length, nseHost, nsePort);
                     this.nseSocket.send(datagramPacket);
-                    logWriter.printf("R%d receives an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
+                    logWriter.printf("R%d sends an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
                             id, id, routerId, linkId, cost, lc.link);
                 }
             }
-            dijkstra();
             logWriter.flush();
         }
 
