@@ -90,10 +90,11 @@ public class Router {
 
     private void receiveHelloAndDatabase() throws IOException {
 
-        byte[] data = this.receivePacket();
-        ByteBuffer byteBuffer = ByteBuffer.wrap(data);
+
 
         for (int i = 0; i < circuitDbs[id - 1].nLinks; i ++) {
+            byte[] data = this.receivePacket();
+            ByteBuffer byteBuffer = ByteBuffer.wrap(data);
             PacketHello packetHello = new PacketHello();
             packetHello.routerId = Integer.reverseBytes(byteBuffer.getInt());
             packetHello.link = Integer.reverseBytes(byteBuffer.getInt());
@@ -111,8 +112,8 @@ public class Router {
             }
         }
         while (true) {
-            data = this.receivePacket();
-            byteBuffer = ByteBuffer.wrap(data);
+            byte[] data = this.receivePacket();
+            ByteBuffer byteBuffer = ByteBuffer.wrap(data);
 
             int sender = Integer.reverseBytes(byteBuffer.getInt());
             int routerId = Integer.reverseBytes(byteBuffer.getInt());
