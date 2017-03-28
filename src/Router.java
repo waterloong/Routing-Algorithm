@@ -17,9 +17,8 @@ public class Router {
     private int nsePort;
     private CircuitDb[] circuitDbs = new CircuitDb[NUMBER_OF_ROUTERS];
     // track if a circuit_db entry has been sent to a link already
-    private Map<Integer, LinkCost> duplicateTracker = new HashMap<>();
+    private Map<Integer, List<Integer>> duplicateTracker = new HashMap<>();
     private PrintWriter logWriter;
-    int[] rib = new int[NUMBER_OF_ROUTERS]; // value is cost to this router
 
     public void printTopologyDatabase() {
         logWriter.println("# Topology Database");
@@ -210,7 +209,7 @@ public class Router {
                 this.circuitDbs[routerId - 1].nLinks++;
                 printTopologyDatabase();
             }
-            this.duplicateTracker.put(linkId, linkCost);
+            this.duplicateTracker.putIfAbsent(via, new ArrayList<>()).add(linkId);
             for (LinkCost lc : circuitDbs[id - 1].linkCosts) {
                 PacketLSPDU packetLSPDU = new PacketLSPDU(id, routerId, linkId, cost, lc.link);
                 if (!duplicateTracker.containsKey(linkId)) {
@@ -219,6 +218,7 @@ public class Router {
                     this.nseSocket.send(datagramPacket);
                     logWriter.printf("R%d sends an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
                             id, id, routerId, linkId, cost, lc.link);
+                    this.duplicateTracker.putIfAbsent(lc.link, new ArrayList<>()).add(linkId);
                 }
             }
             logWriter.flush();
