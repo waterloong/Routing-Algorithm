@@ -74,6 +74,7 @@ public class Router {
             } else {
                 nodes[i] = new DefaultMutableTreeNode(i);
                 nodes[i].setParent(pathTreeRoot);
+                p.add(nodes[i]);
             }
         }
         while (!p.isEmpty()) {
@@ -211,8 +212,8 @@ public class Router {
                     this.circuitDbs[routerId - 1].nLinks++;
                     printTopologyDatabase();
                 }
-                List<Integer> sent = this.duplicateTracker.computeIfAbsent(via, ArrayList::new);
-                sent.add(linkId);
+                List<Integer> sent = this.duplicateTracker.computeIfAbsent(linkId, ArrayList::new);
+                sent.add(via);
                 for (LinkCost lc : circuitDbs[id - 1].linkCosts) {
                     PacketLSPDU packetLSPDU = new PacketLSPDU(id, routerId, linkId, cost, lc.link);
                     if (!sent.contains(linkId)) {
@@ -221,7 +222,7 @@ public class Router {
                         this.nseSocket.send(datagramPacket);
                         logWriter.printf("R%d sends an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
                                 id, id, routerId, linkId, cost, lc.link);
-                        sent.add(linkId);
+                        sent.add(lc.link);
                     }
                 }
             }
