@@ -28,7 +28,7 @@ public class Router {
             if (circuitDb.nLinks == 0) continue;
             logWriter.printf("R%d -> R%d nbr link %d\n", id, i + 1, circuitDb.nLinks);
             for (LinkCost linkCost : circuitDb.linkCosts) {
-                logWriter.printf("R%d -> R%d link %d cost %d\n", id, linkCost.link, linkCost.cost);
+                logWriter.printf("R%d -> R%d link %d cost %d\n", id, i + 1, linkCost.link, linkCost.cost);
             }
         }
         dijkstra();
