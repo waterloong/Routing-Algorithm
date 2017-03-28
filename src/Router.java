@@ -218,7 +218,7 @@ public class Router {
                     this.nseSocket.send(datagramPacket);
                     logWriter.printf("R%d sends an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
                             id, id, routerId, linkId, cost, lc.link);
-                    this.duplicateTracker.putIfAbsent(lc.link, new ArrayList<>()).add(linkId);
+                    this.duplicateTracker.computeIfAbsent(lc.link, ArrayList::new).add(linkId);
                 }
             }
             logWriter.flush();
