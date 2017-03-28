@@ -209,7 +209,7 @@ public class Router {
                 this.circuitDbs[routerId - 1].nLinks++;
                 printTopologyDatabase();
             }
-            this.duplicateTracker.putIfAbsent(via, new ArrayList<>()).add(linkId);
+            this.duplicateTracker.computeIfAbsent(via, ArrayList::new).add(linkId);
             for (LinkCost lc : circuitDbs[id - 1].linkCosts) {
                 PacketLSPDU packetLSPDU = new PacketLSPDU(id, routerId, linkId, cost, lc.link);
                 if (!duplicateTracker.containsKey(linkId)) {
