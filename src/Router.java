@@ -247,7 +247,9 @@ public class Router {
             iae.printStackTrace();
             System.exit(1);
         } finally {
-            router.logWriter.close();
+            if (router.logWriter != null) {
+                router.logWriter.close();
+            }
         }
     }
 
