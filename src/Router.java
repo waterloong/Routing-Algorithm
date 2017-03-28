@@ -17,7 +17,7 @@ public class Router {
     private int nsePort;
     private CircuitDb[] circuitDbs = new CircuitDb[NUMBER_OF_ROUTERS];
     // track if a circuit_db entry has been sent to a link already
-    private Map<Integer, LinkCost> tracker = new HashMap<>();
+    private Map<Integer, LinkCost> duplicateTracker = new HashMap<>();
     private PrintWriter logWriter;
     int[] rib = new int[NUMBER_OF_ROUTERS]; // value is cost to this router
 
@@ -103,7 +103,7 @@ public class Router {
             } else if (newRib[i] == INF){
                 logWriter.println("INF, INF");
             } else {
-                logWriter.printf("R%s, %d", nodes[i].getUserObjectPath()[1], newRib[i]);
+                logWriter.printf("R%s, %d\n", nodes[i].getUserObjectPath()[1], newRib[i]);
             }
         }
 
@@ -208,10 +208,10 @@ public class Router {
             this.circuitDbs[routerId - 1].nLinks++;
             LinkCost linkCost = new LinkCost(linkId, cost);
             this.circuitDbs[routerId - 1].linkCosts.add(linkCost);
-            this.tracker.put(linkId, linkCost);
+            this.duplicateTracker.put(linkId, linkCost);
             for (LinkCost lc : circuitDbs[id - 1].linkCosts) {
                 PacketLSPDU packetLSPDU = new PacketLSPDU(id, routerId, linkId, cost, lc.link);
-                if (!tracker.containsKey(linkId)) {
+                if (!duplicateTracker.containsKey(linkId)) {
                     byte[] bufferedLspdu = packetLSPDU.toBytes();
                     DatagramPacket datagramPacket = new DatagramPacket(bufferedLspdu, bufferedLspdu.length, nseHost, nsePort);
                     this.nseSocket.send(datagramPacket);
@@ -313,4 +313,3 @@ public class Router {
         }
     }
 }
-
