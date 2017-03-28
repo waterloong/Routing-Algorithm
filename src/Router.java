@@ -181,22 +181,20 @@ public class Router {
             byteBuffer.position(0);
             if (isHello) {
                 // receive hello
-                for (int i = 0; i < circuitDbs[id - 1].nLinks; i++) {
-                    PacketHello packetHello = new PacketHello();
-                    packetHello.routerId = Integer.reverseBytes(byteBuffer.getInt());
-                    packetHello.link = Integer.reverseBytes(byteBuffer.getInt());
-                    logWriter.println("R" + id + " receives a HELLO: routerId " + packetHello.routerId + " linkId " + packetHello.link);
-                    int routerId = 1;
-                    while (routerId <= NUMBER_OF_ROUTERS) {
-                        for (LinkCost linkCost : circuitDbs[routerId - 1].linkCosts) {
-                            byte[] bufferedLspdu = new PacketLSPDU(id, routerId, linkCost.link, linkCost.cost, packetHello.link).toBytes();
-                            DatagramPacket datagramPacket = new DatagramPacket(bufferedLspdu, bufferedLspdu.length, nseHost, nsePort);
-                            this.nseSocket.send(datagramPacket);
-                            logWriter.printf("R%d sends an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
-                                    id, id, routerId, linkCost.link, linkCost.cost, packetHello.link);
-                        }
-                        routerId++;
+                PacketHello packetHello = new PacketHello();
+                packetHello.routerId = Integer.reverseBytes(byteBuffer.getInt());
+                packetHello.link = Integer.reverseBytes(byteBuffer.getInt());
+                logWriter.println("R" + id + " receives a HELLO: routerId " + packetHello.routerId + " linkId " + packetHello.link);
+                int routerId = 1;
+                while (routerId <= NUMBER_OF_ROUTERS) {
+                    for (LinkCost linkCost : circuitDbs[routerId - 1].linkCosts) {
+                        byte[] bufferedLspdu = new PacketLSPDU(id, routerId, linkCost.link, linkCost.cost, packetHello.link).toBytes();
+                        DatagramPacket datagramPacket = new DatagramPacket(bufferedLspdu, bufferedLspdu.length, nseHost, nsePort);
+                        this.nseSocket.send(datagramPacket);
+                        logWriter.printf("R%d sends an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
+                                id, id, routerId, linkCost.link, linkCost.cost, packetHello.link);
                     }
+                    routerId++;
                 }
             } else {
                 int sender = Integer.reverseBytes(byteBuffer.getInt());
