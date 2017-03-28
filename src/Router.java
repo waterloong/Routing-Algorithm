@@ -244,6 +244,7 @@ public class Router {
             router = new Router(id, nseHost, nsePort, routerPort);
         } catch (IllegalArgumentException iae) {
             System.err.println("Invalid arguments.");
+            iae.printStackTrace();
             System.exit(1);
         } finally {
             router.logWriter.close();
