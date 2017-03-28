@@ -24,7 +24,7 @@ public class Router {
         for (int i = 0; i < NUMBER_OF_ROUTERS; i ++) {
             CircuitDb circuitDb = circuitDbs[i];
             if (circuitDb == null) continue;
-            System.out.printf("R%d -> R%d nbr link %d", id, i + 1, circuitDb.nLinks);
+            System.out.printf("R%d -> R%d nbr link %d\n", id, i + 1, circuitDb.nLinks);
             for (LinkCost linkCost: circuitDb.linkCosts) {
                 System.out.printf("R%d -> R%d link %d cost %d\n", id, linkCost.link, linkCost.cost);
             }
@@ -113,8 +113,7 @@ public class Router {
         while (true) {
             data = this.receivePacket();
             byteBuffer = ByteBuffer.wrap(data);
-            System.out.printf("buffer sizes %d %d %d %d\n", data.length, byteBuffer.limit(), byteBuffer.capacity(), byteBuffer.remaining());
-            
+
             int sender = Integer.reverseBytes(byteBuffer.getInt());
             int routerId = Integer.reverseBytes(byteBuffer.getInt());
             int linkId = Integer.reverseBytes(byteBuffer.getInt());
