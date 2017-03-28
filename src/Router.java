@@ -20,13 +20,13 @@ public class Router {
     private PrintWriter logWriter;
 
     public void printTopologyDatabase() {
-        System.out.println("# Topology Database");
+        logWriter.println("# Topology Database");
         for (int i = 0; i < NUMBER_OF_ROUTERS; i ++) {
             CircuitDb circuitDb = circuitDbs[i];
             if (circuitDb == null) continue;
-            System.out.printf("R%d -> R%d nbr link %d\n", id, i + 1, circuitDb.nLinks);
+            logWriter.printf("R%d -> R%d nbr link %d\n", id, i + 1, circuitDb.nLinks);
             for (LinkCost linkCost: circuitDb.linkCosts) {
-                System.out.printf("R%d -> R%d link %d cost %d\n", id, linkCost.link, linkCost.cost);
+                logWriter.printf("R%d -> R%d link %d cost %d\n", id, linkCost.link, linkCost.cost);
             }
         }
     }
@@ -53,7 +53,7 @@ public class Router {
         byte[] data = packetInit.toBytes();
         DatagramPacket datagramPacket = new DatagramPacket(data, data.length, nseHost, nsePort);
         nseSocket.send(datagramPacket);
-        System.out.println("R" + id +" sends an INIT: routerId " + id);
+        logWriter.println("R" + id +" sends an INIT: routerId " + id);
     }
 
     private byte[] receivePacket() throws IOException {
@@ -68,11 +68,11 @@ public class Router {
         ByteBuffer byteBuffer = ByteBuffer.wrap(data);
 
         circuitDbs[id - 1].nLinks = Integer.reverseBytes(byteBuffer.getInt());
-        System.out.println("R" + circuitDbs[id - 1].nLinks + " receives a CIRCUIT_DB: nLinks " + circuitDbs[id - 1].nLinks);
+        logWriter.println("R" + circuitDbs[id - 1].nLinks + " receives a CIRCUIT_DB: nLinks " + circuitDbs[id - 1].nLinks);
         for (int i = 0; i < circuitDbs[id - 1].nLinks; i ++) {
             LinkCost linkCost = new LinkCost(Integer.reverseBytes(byteBuffer.getInt()), Integer.reverseBytes(byteBuffer.getInt()));
             circuitDbs[id - 1].linkCosts.add(linkCost);
-            System.out.printf("R%d -> R%d link %d cost %d\n", id, id, linkCost.link, linkCost.cost);
+            logWriter.printf("R%d -> R%d link %d cost %d\n", id, id, linkCost.link, linkCost.cost);
         }
     }
 
@@ -84,7 +84,7 @@ public class Router {
             byte[] data = packetHello.toBytes();
             DatagramPacket datagramPacket = new DatagramPacket(data, data.length, nseHost, nsePort);
             nseSocket.send(datagramPacket);
-            System.out.println("R" + id + " sends an Hello: routerId " + id + " linkId " + linkCost.link);
+            logWriter.println("R" + id + " sends an Hello: routerId " + id + " linkId " + linkCost.link);
         }
     }
 
@@ -97,7 +97,7 @@ public class Router {
             PacketHello packetHello = new PacketHello();
             packetHello.routerId = Integer.reverseBytes(byteBuffer.getInt());
             packetHello.link = Integer.reverseBytes(byteBuffer.getInt());
-            System.out.println("R" + id + " receives a HELLO: routerId " + packetHello.routerId + " linkId " + packetHello.link);
+            logWriter.println("R" + id + " receives a HELLO: routerId " + packetHello.routerId + " linkId " + packetHello.link);
             int routerId = 1;
             while (routerId <= NUMBER_OF_ROUTERS) {
                 if (circuitDbs[routerId - 1] != null) {
@@ -119,7 +119,7 @@ public class Router {
             int linkId = Integer.reverseBytes(byteBuffer.getInt());
             int cost = Integer.reverseBytes(byteBuffer.getInt());
             int via = Integer.reverseBytes(byteBuffer.getInt());
-            System.out.printf("R%d receives an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
+            logWriter.printf("R%d receives an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
                     id, sender, routerId, linkId, cost, via);
 
             this.circuitDbs[routerId - 1].nLinks ++;
@@ -132,7 +132,7 @@ public class Router {
                     byte[] bufferedLspdu = packetLSPDU.toBytes();
                     DatagramPacket datagramPacket = new DatagramPacket(bufferedLspdu, bufferedLspdu.length, nseHost, nsePort);
                     this.nseSocket.send(datagramPacket);
-                    System.out.printf("R%d receives an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
+                    logWriter.printf("R%d receives an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
                             id, id, routerId, linkId, cost, lc.link);
                 }
             }
