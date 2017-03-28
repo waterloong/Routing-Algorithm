@@ -92,6 +92,7 @@ public class Router {
         while (true) {
             byte[] data = this.receivePacket();
             ByteBuffer byteBuffer = ByteBuffer.wrap(data);
+            System.out.printf("buffer sizes %d %d %d %d\n", data.length, byteBuffer.limit(), byteBuffer.capacity(), byteBuffer.remaining());
 
             if (byteBuffer.limit() == 8) {
                 PacketHello packetHello = new PacketHello();
@@ -109,7 +110,7 @@ public class Router {
                     }
                     routerId ++;
                 }
-            } else {
+            } else if (byteBuffer.limit() == 20) {
                 int sender = Integer.reverseBytes(byteBuffer.getInt());
                 int routerId = Integer.reverseBytes(byteBuffer.getInt());
                 int linkId = Integer.reverseBytes(byteBuffer.getInt());
@@ -123,8 +124,8 @@ public class Router {
                 this.circuitDbs[routerId - 1].linkCosts.add(linkCost);
                 this.tracker.put(linkId, linkCost);
                 for (LinkCost lc: circuitDbs[id - 1].linkCosts) {
+                    PacketLSPDU packetLSPDU = new PacketLSPDU(id, routerId, linkId, cost, lc.link);
                     if (!tracker.containsKey(linkId)) {
-                        PacketLSPDU packetLSPDU = new PacketLSPDU(id, routerId, linkId, cost, lc.link);
                         byte[] bufferedLspdu = packetLSPDU.toBytes();
                         DatagramPacket datagramPacket = new DatagramPacket(bufferedLspdu, bufferedLspdu.length, nseHost, nsePort);
                         this.nseSocket.send(datagramPacket);
@@ -132,7 +133,6 @@ public class Router {
                                 id, id, routerId, linkId, cost, lc.link);
                     }
                 }
-
             }
         }
     }
