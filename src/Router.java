@@ -1,3 +1,4 @@
+import javax.swing.tree.DefaultMutableTreeNode;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.DatagramPacket;
@@ -8,27 +9,104 @@ import java.util.*;
 
 public class Router {
 
+    private static final int INF = 65535;
     private static final int NUMBER_OF_ROUTERS = 5;
     private int id;
     private DatagramSocket nseSocket;
     private InetAddress nseHost;
     private int nsePort;
     private CircuitDb[] circuitDbs = new CircuitDb[NUMBER_OF_ROUTERS];
-    private int[][] dag = new int[NUMBER_OF_ROUTERS][NUMBER_OF_ROUTERS];
     // track if a circuit_db entry has been sent to a link already
     private Map<Integer, LinkCost> tracker = new HashMap<>();
     private PrintWriter logWriter;
+    int[] rib = new int[NUMBER_OF_ROUTERS]; // value is cost to this router
 
     public void printTopologyDatabase() {
         logWriter.println("# Topology Database");
-        for (int i = 0; i < NUMBER_OF_ROUTERS; i ++) {
+        for (int i = 0; i < NUMBER_OF_ROUTERS; i++) {
             CircuitDb circuitDb = circuitDbs[i];
-            if (circuitDb == null) continue;
+            if (circuitDb.nLinks == 0) continue;
             logWriter.printf("R%d -> R%d nbr link %d\n", id, i + 1, circuitDb.nLinks);
-            for (LinkCost linkCost: circuitDb.linkCosts) {
+            for (LinkCost linkCost : circuitDb.linkCosts) {
                 logWriter.printf("R%d -> R%d link %d cost %d\n", id, linkCost.link, linkCost.cost);
             }
         }
+    }
+
+    private void dijkstra() {
+        // initialize the graph & RIB
+        int[] newRib = new int[NUMBER_OF_ROUTERS]; // value is cost to this router
+        Map<Integer, Set<int[]>> adjacencyGraph = new HashMap<>(); // routerId -> list of (routerId, cost)
+        for (int i = 0; i < NUMBER_OF_ROUTERS; i++) {
+            newRib[i] = INF;
+            adjacencyGraph.put(i, new LinkedHashSet<>());
+        }
+        newRib[id - 1] = 0;
+
+        // fill the graph with edges
+        Map<Integer, Integer> linkToRouterMap = new HashMap<>();
+        for (int i = 0; i < NUMBER_OF_ROUTERS; i++) {
+            for (LinkCost lc : circuitDbs[i].linkCosts) {
+                int link = lc.link;
+                if (linkToRouterMap.containsKey(link)) {
+                    int j = linkToRouterMap.get(link);
+                    adjacencyGraph.get(i).add(new int[]{j, lc.cost});
+                    adjacencyGraph.get(j).add(new int[]{i, lc.cost});
+                    if (i == id - 1) {
+                        newRib[j] = lc.cost;
+                    } else if (j == id - 1) {
+                        newRib[i] = lc.cost;
+                    }
+                } else {
+                    linkToRouterMap.put(link, i);
+                }
+            }
+        }
+
+        DefaultMutableTreeNode pathTreeRoot = new DefaultMutableTreeNode(id - 1);
+        DefaultMutableTreeNode[] nodes = new DefaultMutableTreeNode[NUMBER_OF_ROUTERS];
+        Set<DefaultMutableTreeNode> p = new LinkedHashSet<>();
+        for (int i = 0; i < NUMBER_OF_ROUTERS; i++) {
+            if (i == id - 1) {
+                nodes[i] = pathTreeRoot;
+            } else {
+                nodes[i] = new DefaultMutableTreeNode(i);
+                nodes[i].setParent(pathTreeRoot);
+            }
+        }
+        while (!p.isEmpty()) {
+            // find w not in N' such that D(w) is a minimum
+            p.stream().sorted((a, b) -> newRib[(Integer) a.getUserObject()] - newRib[(Integer) b.getUserObject()])
+                    .limit(1)
+                    .forEach(w -> {
+                        p.remove(w);
+                        // update D(v) for all v adjacent to w and not in N' :
+                        int routerId = (int) w.getUserObject();
+                        for (int[] neighbor : adjacencyGraph.get(routerId)) {
+                            int neighborId = neighbor[0];
+                            int linkCost = neighbor[1];
+                            if (linkCost + newRib[routerId] < newRib[neighborId]) {
+                                nodes[neighborId].setParent(w);
+                                newRib[neighborId] = linkCost + newRib[routerId];
+                            }
+                        }
+                    });
+        }
+
+        // print RIB if changed
+        if (Arrays.equals(rib, newRib)) return;
+        logWriter.println("# RIB");
+        for (int i = 0; i < NUMBER_OF_ROUTERS; i++) {
+            logWriter.printf("R%d -> R%d -> ", id, i + 1);
+            if (i + 1 == id) {
+                logWriter.println("local, 0");
+            } else if (newRib[i] == INF){
+                logWriter.println("INF, INF");
+            } else {
+                logWriter.printf("R%s, %d", nodes[i].getUserObjectPath()[1], newRib[i]);
+            }
+        }
+
     }
 
     public Router(int id, InetAddress nseHost, int nsePort, int routerPort) throws IOException {
@@ -37,8 +115,7 @@ public class Router {
         this.id = id;
         this.nseHost = nseHost;
         this.nsePort = nsePort;
-        for (int i = 0; i < NUMBER_OF_ROUTERS; i ++) {
-            Arrays.fill(dag[i], Integer.MAX_VALUE);
+        for (int i = 0; i < NUMBER_OF_ROUTERS; i++) {
             circuitDbs[i] = new CircuitDb();
         }
         sendInit();
@@ -53,7 +130,7 @@ public class Router {
         byte[] data = packetInit.toBytes();
         DatagramPacket datagramPacket = new DatagramPacket(data, data.length, nseHost, nsePort);
         nseSocket.send(datagramPacket);
-        logWriter.println("R" + id +" sends an INIT: routerId " + id);
+        logWriter.println("R" + id + " sends an INIT: routerId " + id);
     }
 
     private byte[] receivePacket() throws IOException {
@@ -69,7 +146,7 @@ public class Router {
 
         circuitDbs[id - 1].nLinks = Integer.reverseBytes(byteBuffer.getInt());
         logWriter.println("R" + circuitDbs[id - 1].nLinks + " receives a CIRCUIT_DB: nLinks " + circuitDbs[id - 1].nLinks);
-        for (int i = 0; i < circuitDbs[id - 1].nLinks; i ++) {
+        for (int i = 0; i < circuitDbs[id - 1].nLinks; i++) {
             LinkCost linkCost = new LinkCost(Integer.reverseBytes(byteBuffer.getInt()), Integer.reverseBytes(byteBuffer.getInt()));
             circuitDbs[id - 1].linkCosts.add(linkCost);
             logWriter.printf("R%d -> R%d link %d cost %d\n", id, id, linkCost.link, linkCost.cost);
@@ -79,7 +156,7 @@ public class Router {
     private void sendHello() throws IOException {
         PacketHello packetHello = new PacketHello();
         packetHello.routerId = id;
-        for (LinkCost linkCost: circuitDbs[id - 1].linkCosts) {
+        for (LinkCost linkCost : circuitDbs[id - 1].linkCosts) {
             packetHello.link = linkCost.link;
             byte[] data = packetHello.toBytes();
             DatagramPacket datagramPacket = new DatagramPacket(data, data.length, nseHost, nsePort);
@@ -89,10 +166,8 @@ public class Router {
     }
 
     private void receiveHelloAndDatabase() throws IOException {
-
-
-
-        for (int i = 0; i < circuitDbs[id - 1].nLinks; i ++) {
+        // receive hello
+        for (int i = 0; i < circuitDbs[id - 1].nLinks; i++) {
             byte[] data = this.receivePacket();
             ByteBuffer byteBuffer = ByteBuffer.wrap(data);
             PacketHello packetHello = new PacketHello();
@@ -111,10 +186,17 @@ public class Router {
                 routerId++;
             }
         }
+        // exit after 1 min
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                System.exit(0);
+            }
+        }, 6000);
+        // receive new LSPDU
         while (true) {
             byte[] data = this.receivePacket();
             ByteBuffer byteBuffer = ByteBuffer.wrap(data);
-
             int sender = Integer.reverseBytes(byteBuffer.getInt());
             int routerId = Integer.reverseBytes(byteBuffer.getInt());
             int linkId = Integer.reverseBytes(byteBuffer.getInt());
@@ -123,11 +205,11 @@ public class Router {
             logWriter.printf("R%d receives an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
                     id, sender, routerId, linkId, cost, via);
 
-            this.circuitDbs[routerId - 1].nLinks ++;
+            this.circuitDbs[routerId - 1].nLinks++;
             LinkCost linkCost = new LinkCost(linkId, cost);
             this.circuitDbs[routerId - 1].linkCosts.add(linkCost);
             this.tracker.put(linkId, linkCost);
-            for (LinkCost lc: circuitDbs[id - 1].linkCosts) {
+            for (LinkCost lc : circuitDbs[id - 1].linkCosts) {
                 PacketLSPDU packetLSPDU = new PacketLSPDU(id, routerId, linkId, cost, lc.link);
                 if (!tracker.containsKey(linkId)) {
                     byte[] bufferedLspdu = packetLSPDU.toBytes();
@@ -137,6 +219,8 @@ public class Router {
                             id, id, routerId, linkId, cost, lc.link);
                 }
             }
+            dijkstra();
+            logWriter.flush();
         }
 
     }
@@ -148,19 +232,23 @@ public class Router {
      *             • <router_port> is the router port
      */
     public static void main(String[] args) throws Exception {
-	    // write your code here
+        // write your code here
+        Router router = null;
         try {
             if (args.length != 4) throw new IllegalArgumentException();
             int id = Integer.parseInt(args[0]);
             InetAddress nseHost = InetAddress.getByName(args[1]);
             int nsePort = Integer.parseInt(args[2]);
             int routerPort = Integer.parseInt(args[3]);
-            new Router(id, nseHost, nsePort, routerPort);
+            router = new Router(id, nseHost, nsePort, routerPort);
         } catch (IllegalArgumentException iae) {
             System.err.println("Invalid arguments.");
             System.exit(1);
+        } finally {
+            router.logWriter.close();
         }
     }
+
     private static class PacketInit {
 
         private int routerId;
@@ -172,8 +260,7 @@ public class Router {
         }
     }
 
-    private static class LinkCost
-    {
+    private static class LinkCost {
         private int link, cost;
 
         public LinkCost(int link, int cost) {
@@ -183,7 +270,7 @@ public class Router {
 
         @Override
         public boolean equals(Object linkCost) {
-            return linkCost instanceof LinkCost && this.link == ((LinkCost)linkCost).link;
+            return linkCost instanceof LinkCost && this.link == ((LinkCost) linkCost).link;
         }
     }
 
