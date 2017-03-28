@@ -177,7 +177,7 @@ public class Router {
         while (true) {
             byte[] data = this.receivePacket();
             ByteBuffer byteBuffer = ByteBuffer.wrap(data);
-            if (byteBuffer.get(8) == 0) {
+            if (byteBuffer.getInt(8) == 0) {
                 // receive hello
                 for (int i = 0; i < circuitDbs[id - 1].nLinks; i++) {
                     PacketHello packetHello = new PacketHello();
