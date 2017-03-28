@@ -89,52 +89,56 @@ public class Router {
     }
 
     private void receiveHelloAndDatabase() throws IOException {
-        while (true) {
-            byte[] data = this.receivePacket();
-            ByteBuffer byteBuffer = ByteBuffer.wrap(data);
-            System.out.printf("buffer sizes %d %d %d %d\n", data.length, byteBuffer.limit(), byteBuffer.capacity(), byteBuffer.remaining());
 
-            if (byteBuffer.limit() == 8) {
-                PacketHello packetHello = new PacketHello();
-                packetHello.routerId = Integer.reverseBytes(byteBuffer.getInt());
-                packetHello.link = Integer.reverseBytes(byteBuffer.getInt());
-                System.out.println("R" + id + " receives a HELLO: routerId " + packetHello.routerId + " linkId " + packetHello.link);
-                int routerId = 1;
-                while (routerId <= NUMBER_OF_ROUTERS) {
-                    if (circuitDbs[routerId - 1] != null) {
-                        for (LinkCost linkCost : circuitDbs[routerId - 1].linkCosts) {
-                            byte[] bufferedLspdu = new PacketLSPDU(id, routerId, linkCost.link, linkCost.cost, packetHello.link).toBytes();
-                            DatagramPacket datagramPacket = new DatagramPacket(bufferedLspdu, bufferedLspdu.length, nseHost, nsePort);
-                            this.nseSocket.send(datagramPacket);
-                        }
-                    }
-                    routerId ++;
-                }
-            } else if (byteBuffer.limit() == 20) {
-                int sender = Integer.reverseBytes(byteBuffer.getInt());
-                int routerId = Integer.reverseBytes(byteBuffer.getInt());
-                int linkId = Integer.reverseBytes(byteBuffer.getInt());
-                int cost = Integer.reverseBytes(byteBuffer.getInt());
-                int via = Integer.reverseBytes(byteBuffer.getInt());
-                System.out.printf("R%d receives an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
-                        id, sender, routerId, linkId, cost, via);
+        byte[] data = this.receivePacket();
+        ByteBuffer byteBuffer = ByteBuffer.wrap(data);
 
-                this.circuitDbs[routerId - 1].nLinks ++;
-                LinkCost linkCost = new LinkCost(linkId, cost);
-                this.circuitDbs[routerId - 1].linkCosts.add(linkCost);
-                this.tracker.put(linkId, linkCost);
-                for (LinkCost lc: circuitDbs[id - 1].linkCosts) {
-                    PacketLSPDU packetLSPDU = new PacketLSPDU(id, routerId, linkId, cost, lc.link);
-                    if (!tracker.containsKey(linkId)) {
-                        byte[] bufferedLspdu = packetLSPDU.toBytes();
+        for (int i = 0; i < circuitDbs[id - 1].nLinks; i ++) {
+            PacketHello packetHello = new PacketHello();
+            packetHello.routerId = Integer.reverseBytes(byteBuffer.getInt());
+            packetHello.link = Integer.reverseBytes(byteBuffer.getInt());
+            System.out.println("R" + id + " receives a HELLO: routerId " + packetHello.routerId + " linkId " + packetHello.link);
+            int routerId = 1;
+            while (routerId <= NUMBER_OF_ROUTERS) {
+                if (circuitDbs[routerId - 1] != null) {
+                    for (LinkCost linkCost : circuitDbs[routerId - 1].linkCosts) {
+                        byte[] bufferedLspdu = new PacketLSPDU(id, routerId, linkCost.link, linkCost.cost, packetHello.link).toBytes();
                         DatagramPacket datagramPacket = new DatagramPacket(bufferedLspdu, bufferedLspdu.length, nseHost, nsePort);
                         this.nseSocket.send(datagramPacket);
-                        System.out.printf("R%d receives an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
-                                id, id, routerId, linkId, cost, lc.link);
                     }
+                }
+                routerId++;
+            }
+        }
+        while (true) {
+            data = this.receivePacket();
+            byteBuffer = ByteBuffer.wrap(data);
+            System.out.printf("buffer sizes %d %d %d %d\n", data.length, byteBuffer.limit(), byteBuffer.capacity(), byteBuffer.remaining());
+            
+            int sender = Integer.reverseBytes(byteBuffer.getInt());
+            int routerId = Integer.reverseBytes(byteBuffer.getInt());
+            int linkId = Integer.reverseBytes(byteBuffer.getInt());
+            int cost = Integer.reverseBytes(byteBuffer.getInt());
+            int via = Integer.reverseBytes(byteBuffer.getInt());
+            System.out.printf("R%d receives an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
+                    id, sender, routerId, linkId, cost, via);
+
+            this.circuitDbs[routerId - 1].nLinks ++;
+            LinkCost linkCost = new LinkCost(linkId, cost);
+            this.circuitDbs[routerId - 1].linkCosts.add(linkCost);
+            this.tracker.put(linkId, linkCost);
+            for (LinkCost lc: circuitDbs[id - 1].linkCosts) {
+                PacketLSPDU packetLSPDU = new PacketLSPDU(id, routerId, linkId, cost, lc.link);
+                if (!tracker.containsKey(linkId)) {
+                    byte[] bufferedLspdu = packetLSPDU.toBytes();
+                    DatagramPacket datagramPacket = new DatagramPacket(bufferedLspdu, bufferedLspdu.length, nseHost, nsePort);
+                    this.nseSocket.send(datagramPacket);
+                    System.out.printf("R%d receives an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
+                            id, id, routerId, linkId, cost, lc.link);
                 }
             }
         }
+
     }
 
     /**
