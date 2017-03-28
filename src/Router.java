@@ -12,11 +12,11 @@ public class Router {
     private static final int INF = 65535;
     private static final int NUMBER_OF_ROUTERS = 5;
     private static final int DELAY = 60000; // program automatic termination time
-    private int id;
+    private int id; // id of this router
     private DatagramSocket nseSocket;
     private InetAddress nseHost;
     private int nsePort;
-    private CircuitDb[] circuitDbs = new CircuitDb[NUMBER_OF_ROUTERS];
+    private CircuitDb[] circuitDbs = new CircuitDb[NUMBER_OF_ROUTERS]; // topology database
     // track if a circuit_db entry has been sent to a link already,
     private Map<Integer, List<Integer>> duplicateTracker = new HashMap<>();
     private PrintWriter logWriter;
@@ -38,6 +38,8 @@ public class Router {
         // initialize the graph & RIB
         int[] newRib = new int[NUMBER_OF_ROUTERS]; // value is cost to this router
         Map<Integer, Set<int[]>> adjacencyGraph = new HashMap<>(); // routerId -> list of (routerId, cost)
+        Map<Integer, Integer> linkToRouterMap = new HashMap<>(); // linkId -> routerId
+
         for (int i = 0; i < NUMBER_OF_ROUTERS; i++) {
             newRib[i] = INF;
             adjacencyGraph.put(i, new LinkedHashSet<>());
@@ -45,7 +47,6 @@ public class Router {
         newRib[id - 1] = 0;
 
         // fill the graph with edges
-        Map<Integer, Integer> linkToRouterMap = new HashMap<>();
         for (int i = 0; i < NUMBER_OF_ROUTERS; i++) {
             for (LinkCost lc : circuitDbs[i].linkCosts) {
                 int link = lc.link;
@@ -103,7 +104,7 @@ public class Router {
             } else if (newRib[i] == INF){
                 logWriter.println("INF, INF");
             } else {
-                logWriter.printf("R%s, %d\n", nodes[i].getUserObjectPath()[1], newRib[i]);
+                logWriter.printf("R%d, %d\n", (int)(nodes[i].getUserObjectPath()[1]) + 1, newRib[i]);
             }
         }
 
@@ -143,9 +144,8 @@ public class Router {
     private void receiveCircuitDb() throws IOException {
         byte[] data = this.receivePacket();
         ByteBuffer byteBuffer = ByteBuffer.wrap(data);
-
         circuitDbs[id - 1].nLinks = Integer.reverseBytes(byteBuffer.getInt());
-        logWriter.println("R" + circuitDbs[id - 1].nLinks + " receives a CIRCUIT_DB: nLinks " + circuitDbs[id - 1].nLinks);
+        logWriter.println("R" + id + " receives a CIRCUIT_DB: nLinks " + circuitDbs[id - 1].nLinks);
         for (int i = 0; i < circuitDbs[id - 1].nLinks; i++) {
             LinkCost linkCost = new LinkCost(Integer.reverseBytes(byteBuffer.getInt()), Integer.reverseBytes(byteBuffer.getInt()));
             circuitDbs[id - 1].linkCosts.add(linkCost);
@@ -197,6 +197,7 @@ public class Router {
                     routerId++;
                 }
             } else {
+                // received LSPDU
                 int sender = Integer.reverseBytes(byteBuffer.getInt());
                 int routerId = Integer.reverseBytes(byteBuffer.getInt());
                 int linkId = Integer.reverseBytes(byteBuffer.getInt());
