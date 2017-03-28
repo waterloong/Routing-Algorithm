@@ -216,7 +216,7 @@ public class Router {
                 sent.add(via);
                 for (LinkCost lc : circuitDbs[id - 1].linkCosts) {
                     PacketLSPDU packetLSPDU = new PacketLSPDU(id, routerId, linkId, cost, lc.link);
-                    if (!sent.contains(linkId)) {
+                    if (!sent.contains(lc.link)) {
                         byte[] bufferedLspdu = packetLSPDU.toBytes();
                         DatagramPacket datagramPacket = new DatagramPacket(bufferedLspdu, bufferedLspdu.length, nseHost, nsePort);
                         this.nseSocket.send(datagramPacket);
