@@ -280,6 +280,11 @@ public class Router {
         public boolean equals(Object linkCost) {
             return linkCost instanceof LinkCost && this.link == ((LinkCost) linkCost).link;
         }
+
+        @Override
+        public int hashCode() {
+            return link;
+        }
     }
 
     private static class CircuitDb {
