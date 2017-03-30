@@ -21,4 +21,4 @@ Test environment
 ------
 The program has been tested on `ubuntu1404-002.student.cs.uwaterloo.ca` to host nse, and 004, 008 to host routers.
 
-A router process will terminate 30 seconds after sending the first "hello" packet.  
+A router process will terminate 30 seconds after sending the first "hello" packet. Output will be flushed when this happens.

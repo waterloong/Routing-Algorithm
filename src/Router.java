@@ -134,6 +134,7 @@ public class Router {
         sendInit();
         receiveCircuitDb();
         sendHello();
+        logWriter.flush();
         receiveHelloAndDatabase();
     }
 
