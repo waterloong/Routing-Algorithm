@@ -1,4 +1,5 @@
 import javax.swing.tree.DefaultMutableTreeNode;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.DatagramPacket;
@@ -112,7 +113,7 @@ public class Router {
     }
 
     public Router(int id, InetAddress nseHost, int nsePort, int routerPort) throws IOException {
-        this.logWriter = new PrintWriter("router" + id + ".log");
+        this.logWriter = new PrintWriter(new FileOutputStream("router" + id + ".log"), true);
         this.nseSocket = new DatagramSocket(routerPort);
         this.id = id;
         this.nseHost = nseHost;
@@ -121,11 +122,8 @@ public class Router {
             circuitDbs[i] = new CircuitDb();
         }
         sendInit();
-        logWriter.flush();
         receiveCircuitDb();
-        logWriter.flush();
         sendHello();
-        logWriter.flush();
         receiveHelloAndDatabase();
     }
 
@@ -229,7 +227,6 @@ public class Router {
                     }
                 }
             }
-            logWriter.flush();
         }
 
     }
