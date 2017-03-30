@@ -18,7 +18,7 @@ public class Router {
     private InetAddress nseHost;
     private int nsePort;
     private CircuitDb[] circuitDbs = new CircuitDb[NUMBER_OF_ROUTERS]; // topology database
-    // track if a circuit_db entry has been sent to a link already,
+    // track if a circuit_db entry has been sent to a link already, key: linkId as "sent content", value: links via which key is sent
     private Map<Integer, List<Integer>> duplicateTracker = new HashMap<>();
     private PrintWriter logWriter;
 
@@ -197,6 +197,7 @@ public class Router {
                 packetHello.routerId = Integer.reverseBytes(byteBuffer.getInt());
                 packetHello.link = Integer.reverseBytes(byteBuffer.getInt());
                 logWriter.println("R" + id + " receives a HELLO: routerId " + packetHello.routerId + " linkId " + packetHello.link);
+
                 int routerId = 1;
                 while (routerId <= NUMBER_OF_ROUTERS) {
                     for (LinkCost linkCost : circuitDbs[routerId - 1].linkCosts) {
@@ -205,6 +206,7 @@ public class Router {
                         this.nseSocket.send(datagramPacket);
                         logWriter.printf("R%d sends an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n",
                                 id, id, routerId, linkCost.link, linkCost.cost, packetHello.link);
+                        this.duplicateTracker.computeIfAbsent(linkCost.link, ArrayList::new).add(packetHello.link);
                     }
                     routerId ++;
                 }
