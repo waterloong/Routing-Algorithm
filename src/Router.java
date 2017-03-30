@@ -11,7 +11,7 @@ public class Router {
 
     private static final int INF = 65535;
     private static final int NUMBER_OF_ROUTERS = 5;
-    private static final int DELAY = 60000; // program automatic termination time
+    private static final int DELAY = 10000; // program automatic termination time
     private int id; // id of this router
     private DatagramSocket nseSocket;
     private InetAddress nseHost;
@@ -121,8 +121,11 @@ public class Router {
             circuitDbs[i] = new CircuitDb();
         }
         sendInit();
+        logWriter.flush();
         receiveCircuitDb();
+        logWriter.flush();
         sendHello();
+        logWriter.flush();
         receiveHelloAndDatabase();
     }
 
